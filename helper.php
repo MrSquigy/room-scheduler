@@ -49,7 +49,7 @@
             // Function to run query on the current connection
             $out = $this->conn->query($sql);
             if ($out === TRUE) {
-                debug("Suceeded to ".$desc);
+                debug("Succeeded to ".$desc);
             } else {
                 debug("Failed to ".$desc .". Technical details: ".$this->conn->error);
             }
@@ -106,7 +106,13 @@
         // Function to print when debug mode is enabled
         if (DEBUG) {
             $time = time();
-            echo (date("[d-m-Y H:i:s] ", $time)).$string."<br>";
+            $msg = (date("[d-m-Y H:i:s] ", $time)).$string;
+            echo $msg."<br>";
+            if (LOGGING) {
+                $logFile = fopen(LOGFILE, 'a');
+                fwrite($logFile, $msg."\n");
+                fclose($logFile);
+            }
         }
     }
 ?>
