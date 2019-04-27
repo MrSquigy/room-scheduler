@@ -1,5 +1,4 @@
 <?
-
     // Database stuff
     define('DBUSER', 'root');
     define('DBPWD', '');
