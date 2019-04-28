@@ -21,15 +21,18 @@
 
     function debug($string) {
         // Function to print when debug mode is enabled
+
+        $time = time();
+        $msg = (date("[d-m-Y H:i:s] ", $time)).$string;
+
         if (DEBUG) {
-            $time = time();
-            $msg = (date("[d-m-Y H:i:s] ", $time)).$string;
             echo $msg."<br>";
-            if (LOGGING) {
-                $logFile = fopen(LOGFILE, 'a');
-                fwrite($logFile, $msg."\n");
-                fclose($logFile);
-            }
+        }
+
+        if (LOGGING) {
+            $logFile = fopen(LOGFILE, 'a');
+            fwrite($logFile, $msg."\n");
+            fclose($logFile);
         }
     }
 
