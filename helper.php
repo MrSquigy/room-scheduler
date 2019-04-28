@@ -33,7 +33,17 @@
         private $conn;
 
         /* Member functions */
-        function makeConn($connectDB = true) {
+        private function runQuery($sql, $desc = "run the query", $check = true) {
+            // Function to run query on the current connection
+            
+            $out = $this->conn->query($sql);
+            if (!($out === TRUE) && $check) debug("Failed to ".$desc.". Technical details: ".$this->conn->error);
+            else debug("Succeeded to ".$desc);
+            
+            return $out;
+        }
+
+        public function makeConn($connectDB = true) {
             // Function to make the mysql connection
             $this->conn = new mysqli(DBHOST, DBUSER, DBPWD);
 
@@ -50,36 +60,38 @@
             }
         }
 
-        function closeConn() {
+        public function closeConn() {
             // Function to close mysql connection
+            
             $this->conn->close();
             debug("Connection closed");
         }
 
-        function runQuery($sql, $desc = "run the query", $check = true) {
-            // Function to run query on the current connection
-            
-            $out = $this->conn->query($sql);
-            if (!($out === TRUE) && $check) debug("Failed to ".$desc.". Technical details: ".$this->conn->error);
-            else debug("Succeeded to ".$desc);
-            
-            return $out;
-        }
-
-        function escapeStr($string) {
+        public function escapeStr($string) {
             return mysqli_real_escape_string($this->conn, $string);
         }
 
-        function setup($reinstall = false) {
+        public function setup($reinstall = false) {
             // Setup function
             $run;
+
+            // Date stuff for testing
+            $startDate = mktime(0, 0, 0, 1, 1, 1970); // January 1st 1970
+            $startDate = date('Y-m-d H:i:s', $startDate);
+            $endDate = mktime(0, 0, 0, 12, 31, 2030); // December 31st 2030
+            $endDate = date('Y-m-d H:i:s', $endDate);
 
             // All sql commands for setup
             $createDB = "CREATE DATABASE IF NOT EXISTS ".DBNAME."";
             $createUsers = "CREATE TABLE IF NOT EXISTS ".USRTBL." (id INT(6) AUTO_INCREMENT PRIMARY KEY, username VARCHAR(30) NOT NULL, password VARCHAR(255) NOT NULL, firstName VARCHAR(30) NOT NULL, lastName VARCHAR(30) NOT NULL, email VARCHAR(50), regDate DATETIME DEFAULT CURRENT_TIMESTAMP)";
-            $createEvents = "CREATE TABLE IF NOT EXISTS ".EVTTBL." (id BIGINT AUTO_INCREMENT PRIMARY KEY, ownerId INT(6) NOT NULL, name VARCHAR(30) NOT NULL, description TEXT, date DATETIME DEFAULT CURRENT_TIMESTAMP)";
+            $createEvents = "CREATE TABLE IF NOT EXISTS ".EVTTBL." (id BIGINT AUTO_INCREMENT PRIMARY KEY, roomId INT(6) NOT NULL, ownerId INT(6) NOT NULL, name VARCHAR(30) NOT NULL, description TEXT, startDate DATETIME NOT NULL, endDate DATETIME NOT NULL, dateCreated DATETIME DEFAULT CURRENT_TIMESTAMP)";
+            $createRooms = "CREATE TABLE IF NOT EXISTS ".RMSTBL." (id INT(6) AUTO_INCREMENT PRIMARY KEY, name VARCHAR(30) NOT NULL, number INT(6) NOT NULL)";
+
             $deleteDB = "DROP DATABASE IF EXISTS ".DBNAME."";
-            $insertAdmin = "INSERT INTO ".USRTBL." (username, password, firstName, lastName) VALUES ('admin', '', 'Administrator', '')";
+            $adminPass = password_hash(ADMINPASS, PASSWORD_DEFAULT);
+            $insertAdmin = "INSERT INTO ".USRTBL." (username, password, firstName, lastName) VALUES ('admin', '$adminPass', 'Administrator', '')";
+            $insertConf = "INSERT INTO ".RMSTBL." (name, number) VALUES ('Conference Room', '1')";
+            $insertEvt = "INSERT INTO ".EVTTBL." (roomId, ownerId, name, description, startDate, endDate) VALUES ('1', '1', 'Test event', 'Event made for testing purposes.', '$startDate', '$endDate')";
 
             // Reinstall
             if ($reinstall) {
@@ -106,15 +118,18 @@
             $this->closeConn();
             $this->makeConn();
 
-            $run = $this->runQuery($createUsers, "create the users table");
-            $run = $this->runQuery($createEvents, "create the events table");
-            $run = $this->runQuery($insertAdmin, "insert admin account");
+            $this->runQuery($createUsers, "create the users table");
+            $this->runQuery($createEvents, "create the events table");
+            $this->runQuery($createRooms, "create the rooms table");
+            $this->runQuery($insertAdmin, "insert admin account");
+            $this->runQuery($insertConf, "insert conference room");
+            $this->runQuery($insertEvt, "insert test event");
 
             // Close connection
             $this->closeConn();
         }
 
-        function registerUser($username, $pass, $first, $last, $email) {
+        public function registerUser($username, $pass, $first, $last, $email) {
             // Function to register a user
             $run;
             $ret = true;
@@ -147,7 +162,7 @@
             return $ret;
         }
 
-        function login($username, $pass) {
+        public function login($username, $pass) {
             // Function to login user
             $run;
             $ret = false;
@@ -169,6 +184,44 @@
             } else echo "No user exists with that username<br>";
 
             $this->closeConn();
+            return $ret;
+        }
+
+        public function getRooms() {
+            // Function to return an array of rooms
+            $run;
+
+            $this->makeConn();
+            $getRooms = "SELECT * FROM ".RMSTBL." ORDER BY `name` ASC";
+
+            // Get rooms
+            $run = $this->runQuery($getRooms, "get list of all rooms", false);
+            
+            $this->closeConn();
+            return $run;
+        }
+
+        public function getRoomSchedule($roomID) {
+            // Function to return a table of the room schedule
+            $run;
+
+            $ret = "<table>";
+            $this->makeConn();
+            $getEvents = "SELECT * FROM ".EVTTBL." WHERE roomId = '$roomID'";
+
+            $run = $this->runQuery($getEvents, "get list of events for room $roomID", false);
+            
+            $count = 0;
+            if ($run->num_rows > 0) {
+                $ret = $ret . "<tr><td><b>Event Name</b></td><td><b>Event Description</b></td><td><b>Start Date</b></td><td><b>End Date</b></td></tr>";
+                while ($event = $run->fetch_assoc()) $ret = $ret . "<tr><td>$event[name]</td><td>$event[description]</td><td>$event[startDate]</td><td>$event[endDate]</td></tr>";
+            }
+            else $ret = $ret . "<tr><td>No results</td></tr>";
+
+            $ret = $ret . "</table>";
+
+            $this->closeConn();
+            
             return $ret;
         }
     }
