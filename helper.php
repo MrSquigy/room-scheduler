@@ -8,8 +8,8 @@
 
     // Session stuff
     session_start();
-    if (isset($_SESSION['helper'])) $_SESSION['helper'] = new Helper(); // Create helper instance if one does not exist
-    if (isset($_SESSION['user'])) $_SESSION['user'] = new User(); // Create guest user if one does not exist
+    if (!isset($_SESSION['helper'])) $_SESSION['helper'] = new Helper(); // Create helper instance if one does not exist
+    if (!isset($_SESSION['user'])) $_SESSION['user'] = new User(); // Create guest user if one does not exist
     $helper = $_SESSION['helper']; // $helper is a shorthand to $_SESSION['helper']
     $user = $_SESSION['user']; // $user is a shorthand to $_SESSION['user']
 
@@ -56,11 +56,12 @@
             debug("Connection closed");
         }
 
-        function runQuery($sql, $desc = "run the query") {
+        function runQuery($sql, $desc = "run the query", $check = true) {
             // Function to run query on the current connection
+            
             $out = $this->conn->query($sql);
-            if ($out === TRUE) debug("Succeeded to ".$desc);
-            else debug("Failed to ".$desc.". Technical details: ".$this->conn->error);
+            if (!($out === TRUE) && $check) debug("Failed to ".$desc.". Technical details: ".$this->conn->error);
+            else debug("Succeeded to ".$desc);
             
             return $out;
         }
@@ -123,14 +124,13 @@
             $chkUser = "SELECT * FROM ".USRTBL." WHERE email = '$email' or username = '$username'";
 
             // Check for duplicate user
-            $run = $this->runQuery($chkUser, "check if duplicate user for registration");
+            $run = $this->runQuery($chkUser, "check if duplicate user for registration", false);
             $chk = $run->fetch_assoc();
             if ($chk) {
                 $ret = false;
                 if ($chk['username'] === $username) echo "Username already exists<br>";
                 if ($chk['email'] === $email) echo "Email already exists<br>";
 
-                $chk->free();
                 $this->closeConn();
                 exit(); // Stop running to prevent errors
             }
@@ -143,7 +143,6 @@
                 $user = $_SESSION['user'];
             }
 
-            $chk->free();
             $this->closeConn();
             return $ret;
         }
@@ -157,7 +156,7 @@
             $chkUser = "SELECT * FROM ".USRTBL." WHERE username = '$username'";
             
             // Check for username
-            $run = $this->runQuery($chkUser, "check username for login '$username'");
+            $run = $this->runQuery($chkUser, "check username for login '$username'", false);
             $chk = $run->fetch_assoc();
 
             if ($chk) {
