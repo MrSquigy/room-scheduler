@@ -1,7 +1,7 @@
 <?
     require_once('helper.php');
 
-    if (isset($_POST['Register'])) {
+    if (isset($_POST['register'])) {
         // Check input
         $helper->makeConn();
         $username = $helper->escapeStr($_POST['username']);
@@ -10,11 +10,13 @@
         $first = $helper->escapeStr($_POST['first']);
         $last = $helper->escapeStr($_POST['last']);
         $helper->closeConn();
+       
+        // Register user
         $reg = $helper->registerUser($username, $password, $first, $last, $email);
 
-        if ($reg) {
-            echo "Registered successfully<br>";
-        }
+        if ($reg) echo "Registered successfully<br>";
+        else echo "Failed to register<br>";
+        echo "<a href='index.php'>home</a>";
     } else {
         ?>
 
@@ -30,7 +32,7 @@
                 <tr><td><input type="text" maxlength="30" size="32" name="first"></td></tr>
                 <tr><td><label for="last">Last Name</label></td></tr>
                 <tr><td><input type="text" maxlength="30" size="32" name="last"></td></tr>
-                <tr><td><input type="submit" name="Register" value="Register"></td></tr>
+                <tr><td><input type="submit" name="register" value="Register"></td></tr>
             </table>
         </form>
 

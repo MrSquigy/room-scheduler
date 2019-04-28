@@ -10,11 +10,7 @@
 
         // Login user
         $log = $helper->login($username, $password);
-        if ($log) {
-            
-        } else {
-            echo "Failed to log user in<br>";
-        }
+        if (!$log) echo "Failed to log user in<br>";
         echo "<a href='index.php'>home</a>";
     } else {
         ?>
