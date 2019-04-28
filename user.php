@@ -4,10 +4,11 @@
 
     class User {
         /* Member variables */
-        var $name;
-        var $email;
-        var $first;
-        var $last;
+        private $name;
+        private $email;
+        private $first;
+        private $last;
+        private $guest;
 
         /* Member functions */
         function __construct() {
@@ -21,11 +22,15 @@
                     self::__constructUser($argv[0], $argv[1], $argv[2], $argv[3]);
                     break;
             }
+
+            $_SESSION['user'] = $this;
         }
 
         function __constructGuest() {
             // Guest user constructor function
-            $name = "Guest";
+            $this->name = "Guest";
+            $this->guest = true;
+            debug("Created guest user session");
         }
 
         function __constructUser($name, $email, $first, $last) {
@@ -34,6 +39,28 @@
             $this->email = $email;
             $this->first = $first;
             $this->last = $last;
+            $this->guest = false;
+            debug("Created normal user session");
+        }
+
+        function getName() {
+            return $this->name;
+        }
+
+        function getEmail() {
+            return $this->email;
+        }
+
+        function getFirst() {
+            return $this->first;
+        }
+
+        function getLast() {
+            return $this->last;
+        }
+
+        function isGuest() {
+            return $this->guest;
         }
     }
 ?>
