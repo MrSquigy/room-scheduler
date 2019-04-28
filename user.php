@@ -43,24 +43,54 @@
             debug("Created normal user session");
         }
 
-        function getName() {
+        public function isGuest() {
+            return $this->guest;
+        }
+
+        public function showDetails() {
+            if (!$this->guest) {
+                echo "User details<br>";
+                echo "Username: ".$this->name;
+                echo "<br>First name: ".$this->first;
+                echo "<br>Last name: ".$this->last;
+                echo "<br>Email: ".$this->email;
+            } else {
+                echo "Guest account<br>";
+            }
+        }
+
+        /* Getter functions */
+        public function getName() {
             return $this->name;
         }
 
-        function getEmail() {
+        public function getEmail() {
             return $this->email;
         }
 
-        function getFirst() {
+        public function getFirst() {
             return $this->first;
         }
 
-        function getLast() {
+        public function getLast() {
             return $this->last;
         }
 
-        function isGuest() {
-            return $this->guest;
+        /* Setter functions */
+        public function setName($name) {
+            $this->name = $name;
+        }
+
+        public function setEmail($email) {
+            $this->email = $email;
+        }
+
+        public function setFirst($first) {
+            $this->first = $first;
+        }
+
+        public function setLast($last) {
+            $this->last = $last;
         }
     }
 ?>
