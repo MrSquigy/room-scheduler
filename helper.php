@@ -8,16 +8,10 @@
 
     // Session stuff
     session_start();
-    if (empty($_SESSION['helper'])) {
-        $_SESSION['helper'] = new Helper(); // Create helper instance if one does not exist
-    }
-
-    if (empty($_SESSION['user'])) {
-        $_SESSION['user'] = new User(); // Create guest user
-    }
-
-    $helper = $_SESSION['helper'];
-    $user = $_SESSION['user'];
+    if (isset($_SESSION['helper'])) $_SESSION['helper'] = new Helper(); // Create helper instance if one does not exist
+    if (isset($_SESSION['user'])) $_SESSION['user'] = new User(); // Create guest user if one does not exist
+    $helper = $_SESSION['helper']; // $helper is a shorthand to $_SESSION['helper']
+    $user = $_SESSION['user']; // $user is a shorthand to $_SESSION['user']
 
     function debug($string) {
         // Function to print when debug mode is enabled
@@ -25,9 +19,7 @@
         $time = time();
         $msg = (date("[d-m-Y H:i:s] ", $time)).$string;
 
-        if (DEBUG) {
-            echo $msg."<br>";
-        }
+        if (DEBUG) echo $msg."<br>";
 
         if (LOGGING) {
             $logFile = fopen(LOGFILE, 'a');
@@ -38,7 +30,7 @@
 
     class Helper {
         /* Member vars */
-        var $conn;
+        private $conn;
 
         /* Member functions */
         function makeConn($connectDB = true) {
@@ -46,10 +38,7 @@
             $this->conn = new mysqli(DBHOST, DBUSER, DBPWD);
 
             // Check connection
-            if ($this->conn->connect_error) {
-                die("Connection failed: ".$this->conn->connect_error);
-            }
-
+            if ($this->conn->connect_error) die("Connection failed: ".$this->conn->connect_error);
             debug("Connection open");
 
             // Connect to main db
@@ -57,9 +46,7 @@
                 if (!mysqli_select_db($this->conn, DBNAME)) {
                     debug("Database does not exist, running setup");
                     $this->setup();
-                } else {
-                    debug("Database selected");
-                }
+                } else debug("Database selected");
             }
         }
 
@@ -72,12 +59,9 @@
         function runQuery($sql, $desc = "run the query") {
             // Function to run query on the current connection
             $out = $this->conn->query($sql);
-            if ($out === TRUE) {
-                debug("Succeeded to ".$desc);
-            } else {
-                debug("Failed to ".$desc.". Technical details: ".$this->conn->error);
-            }
-
+            if ($out === TRUE) debug("Succeeded to ".$desc);
+            else debug("Failed to ".$desc.". Technical details: ".$this->conn->error);
+            
             return $out;
         }
 
@@ -91,7 +75,7 @@
 
             // All sql commands for setup
             $createDB = "CREATE DATABASE IF NOT EXISTS ".DBNAME."";
-            $createUsers = "CREATE TABLE IF NOT EXISTS ".USRTBL." (id INT(6) AUTO_INCREMENT PRIMARY KEY, username VARCHAR(30) NOT NULL, password VARCHAR(30) NOT NULL, firstName VARCHAR(30) NOT NULL, lastName VARCHAR(30) NOT NULL, email VARCHAR(50), regDate DATETIME DEFAULT CURRENT_TIMESTAMP)";
+            $createUsers = "CREATE TABLE IF NOT EXISTS ".USRTBL." (id INT(6) AUTO_INCREMENT PRIMARY KEY, username VARCHAR(30) NOT NULL, password VARCHAR(255) NOT NULL, firstName VARCHAR(30) NOT NULL, lastName VARCHAR(30) NOT NULL, email VARCHAR(50), regDate DATETIME DEFAULT CURRENT_TIMESTAMP)";
             $createEvents = "CREATE TABLE IF NOT EXISTS ".EVTTBL." (id BIGINT AUTO_INCREMENT PRIMARY KEY, ownerId INT(6) NOT NULL, name VARCHAR(30) NOT NULL, description TEXT, date DATETIME DEFAULT CURRENT_TIMESTAMP)";
             $deleteDB = "DROP DATABASE IF EXISTS ".DBNAME."";
             $insertAdmin = "INSERT INTO ".USRTBL." (username, password, firstName, lastName) VALUES ('admin', '', 'Administrator', '')";
@@ -132,6 +116,7 @@
         function registerUser($username, $pass, $first, $last, $email) {
             // Function to register a user
             $run;
+            $ret = true;
 
             $this->makeConn();
             $insertUser = "INSERT INTO ".USRTBL." (username, password, firstName, lastName, email) VALUES ('$username', '$pass', '$first', '$last', '$email')";
@@ -139,16 +124,13 @@
 
             // Check for duplicate user
             $run = $this->runQuery($chkUser, "check if duplicate user for registration");
-            $chk = mysqli_fetch_assoc($run);
+            $chk = $run->fetch_assoc();
             if ($chk) {
-                if ($chk['username'] === $username) {
-                    echo "Username already exists<br>";
-                }
+                $ret = false;
+                if ($chk['username'] === $username) echo "Username already exists<br>";
+                if ($chk['email'] === $email) echo "Email already exists<br>";
 
-                if ($chk['email'] === $email) {
-                    echo "Email already exists<br>";
-                }
-
+                $chk->free();
                 $this->closeConn();
                 exit(); // Stop running to prevent errors
             }
@@ -161,11 +143,34 @@
                 $user = $_SESSION['user'];
             }
 
+            $chk->free();
             $this->closeConn();
+            return $ret;
         }
 
         function login($username, $pass) {
-            // nothing
+            // Function to login user
+            $run;
+            $ret = false;
+
+            $this->makeConn();
+            $chkUser = "SELECT * FROM ".USRTBL." WHERE username = '$username'";
+            
+            // Check for username
+            $run = $this->runQuery($chkUser, "check username for login '$username'");
+            $chk = $run->fetch_assoc();
+
+            if ($chk) {
+                if (password_verify($pass, $chk['password'])) {
+                    // Password is valid, log user in
+                    $_SESSION['user'] = new User($username, $chk['email'], $chk['firstName'], $chk['lastName']);
+                    echo "Logged user in successfully<br>";
+                    $ret = true;
+                } else echo "Incorrect password for user<br>";
+            } else echo "No user exists with that username<br>";
+
+            $this->closeConn();
+            return $ret;
         }
     }
 ?>
