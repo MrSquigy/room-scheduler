@@ -1,0 +1,1 @@
+This branch was created to separate the "god class" helper class into proper classes.
