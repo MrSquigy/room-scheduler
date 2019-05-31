@@ -39,34 +39,6 @@
             $this->conn = new DatabaseConnection();
         }
 
-        public function makeConn($connectDB = true) {
-            // Function to make the mysql connection
-            $this->conn = new mysqli(DBHOST, DBUSER, DBPWD);
-
-            // Check connection
-            if ($this->conn->connect_error) die("Connection failed: ".$this->conn->connect_error);
-            debug("Connection open");
-
-            // Connect to main db
-            if ($connectDB) {
-                if (!mysqli_select_db($this->conn, DBNAME)) {
-                    debug("Database does not exist, running setup");
-                    $this->setup();
-                } else debug("Database selected");
-            }
-        }
-
-        public function closeConn() {
-            // Function to close mysql connection
-            
-            $this->conn->close();
-            debug("Connection closed");
-        }
-
-        public function escapeStr($string) {
-            return mysqli_real_escape_string($this->conn, $string);
-        }
-
         public function setup($reinstall = false) {
             // Setup function
             $run;
@@ -91,28 +63,28 @@
 
             // Reinstall
             if ($reinstall) {
-                $this->makeConn(false); // Connect with no db selection
+                $this->conn->makeConn(false); // Connect with no db selection
                 $run = $this->conn->runQuery($deleteDB, "delete the database");
                 if (!$run) {
-                    $this->closeConn();
+                    $this->conn->closeConn();
                     exit(); // Have to drop db to proceed
                 }
 
-                $this->closeConn();
+                $this->conn->closeConn();
             }
 
             // Make connection with no db selection
-            $this->makeConn(false);
+            $this->conn->makeConn(false);
 
             $run = $this->conn->runQuery($createDB, "create the database");
             if (!$run) {
-                $this->closeConn();
+                $this->conn->closeConn();
                 exit(); // Have to create db to proceed
             }
 
             // Reconnect to mysql with db selection
-            $this->closeConn();
-            $this->makeConn();
+            $this->conn->closeConn();
+            $this->conn->makeConn();
 
             $this->conn->runQuery($createUsers, "create the users table");
             $this->conn->runQuery($createEvents, "create the events table");
@@ -122,7 +94,7 @@
             $this->conn->runQuery($insertEvt, "insert test event");
 
             // Close connection
-            $this->closeConn();
+            $this->conn->closeConn();
         }
 
         public function registerUser($username, $pass, $first, $last, $email) {
@@ -130,7 +102,7 @@
             $run;
             $ret = true;
 
-            $this->makeConn();
+            $this->conn->makeConn();
             $insertUser = "INSERT INTO ".USRTBL." (username, password, firstName, lastName, email) VALUES ('$username', '$pass', '$first', '$last', '$email')";
             $chkUser = "SELECT * FROM ".USRTBL." WHERE email = '$email' or username = '$username'";
 
@@ -142,7 +114,7 @@
                 if ($chk['username'] === $username) echo "Username already exists<br>";
                 if ($chk['email'] === $email) echo "Email already exists<br>";
 
-                $this->closeConn();
+                $this->conn->closeConn();
                 exit(); // Stop running to prevent errors
             }
 
@@ -154,7 +126,7 @@
                 $user = $_SESSION['user'];
             }
 
-            $this->closeConn();
+            $this->conn->closeConn();
             return $ret;
         }
 
@@ -163,7 +135,7 @@
             $run;
             $ret = false;
 
-            $this->makeConn();
+            $this->conn->makeConn();
             $chkUser = "SELECT * FROM ".USRTBL." WHERE username = '$username'";
             
             // Check for username
@@ -179,21 +151,26 @@
                 } else echo "Incorrect password for user<br>";
             } else echo "No user exists with that username<br>";
 
-            $this->closeConn();
+            $this->conn->closeConn();
             return $ret;
+        }
+
+        public function escapeStr($string) {
+            // So other objects do not need to have an instance of DatabaseConnection
+            return $this->conn->escape($string);
         }
 
         public function getRooms() {
             // Function to return an array of rooms
             $run;
 
-            $this->makeConn();
+            $this->conn->makeConn();
             $getRooms = "SELECT * FROM ".RMSTBL." ORDER BY `name` ASC";
 
             // Get rooms
             $run = $this->conn->runQuery($getRooms, "get list of all rooms", false);
             
-            $this->closeConn();
+            $this->conn->closeConn();
             return $run;
         }
 
@@ -202,7 +179,7 @@
             $run;
 
             $ret = "<table>";
-            $this->makeConn();
+            $this->conn->makeConn();
             $getEvents = "SELECT * FROM ".EVTTBL." WHERE roomId = '$roomID'";
 
             $run = $this->conn->runQuery($getEvents, "get list of events for room $roomID", false);
@@ -216,7 +193,7 @@
 
             $ret = $ret . "</table>";
 
-            $this->closeConn();
+            $this->conn->closeConn();
             
             return $ret;
         }
