@@ -1,9 +1,10 @@
 <?
     /**
-     * Helper functions class
+     * Helper Class
      */
 
     require_once('config.php');
+    require_once('classes/databaseConnection.php');
     require_once('user.php');
 
     // Session stuff
@@ -30,17 +31,12 @@
 
     class Helper {
         /* Member vars */
-        private $conn;
+        private $conn; // DatabaseConnection object
 
         /* Member functions */
-        private function runQuery($sql, $desc = "run the query", $check = true) {
-            // Function to run query on the current connection
-            
-            $out = $this->conn->query($sql);
-            if (!($out === TRUE) && $check) debug("Failed to ".$desc.". Technical details: ".$this->conn->error);
-            else debug("Succeeded to ".$desc);
-            
-            return $out;
+        function __construct() {
+            // Constructor to set up dependant objects
+            $this->conn = new DatabaseConnection();
         }
 
         public function makeConn($connectDB = true) {
@@ -96,7 +92,7 @@
             // Reinstall
             if ($reinstall) {
                 $this->makeConn(false); // Connect with no db selection
-                $run = $this->runQuery($deleteDB, "delete the database");
+                $run = $this->conn->runQuery($deleteDB, "delete the database");
                 if (!$run) {
                     $this->closeConn();
                     exit(); // Have to drop db to proceed
@@ -108,7 +104,7 @@
             // Make connection with no db selection
             $this->makeConn(false);
 
-            $run = $this->runQuery($createDB, "create the database");
+            $run = $this->conn->runQuery($createDB, "create the database");
             if (!$run) {
                 $this->closeConn();
                 exit(); // Have to create db to proceed
@@ -118,12 +114,12 @@
             $this->closeConn();
             $this->makeConn();
 
-            $this->runQuery($createUsers, "create the users table");
-            $this->runQuery($createEvents, "create the events table");
-            $this->runQuery($createRooms, "create the rooms table");
-            $this->runQuery($insertAdmin, "insert admin account");
-            $this->runQuery($insertConf, "insert conference room");
-            $this->runQuery($insertEvt, "insert test event");
+            $this->conn->runQuery($createUsers, "create the users table");
+            $this->conn->runQuery($createEvents, "create the events table");
+            $this->conn->runQuery($createRooms, "create the rooms table");
+            $this->conn->runQuery($insertAdmin, "insert admin account");
+            $this->conn->runQuery($insertConf, "insert conference room");
+            $this->conn->runQuery($insertEvt, "insert test event");
 
             // Close connection
             $this->closeConn();
@@ -139,7 +135,7 @@
             $chkUser = "SELECT * FROM ".USRTBL." WHERE email = '$email' or username = '$username'";
 
             // Check for duplicate user
-            $run = $this->runQuery($chkUser, "check if duplicate user for registration", false);
+            $run = $this->conn->runQuery($chkUser, "check if duplicate user for registration", false);
             $chk = $run->fetch_assoc();
             if ($chk) {
                 $ret = false;
@@ -151,7 +147,7 @@
             }
 
             // Register the user
-            $run = $this->runQuery($insertUser, "register user for email '$email'");
+            $run = $this->conn->runQuery($insertUser, "register user for email '$email'");
             if ($run === TRUE) {
                 // Create user object
                 $_SESSION['user'] = new User($username, $email, $first, $last);
@@ -171,7 +167,7 @@
             $chkUser = "SELECT * FROM ".USRTBL." WHERE username = '$username'";
             
             // Check for username
-            $run = $this->runQuery($chkUser, "check username for login '$username'", false);
+            $run = $this->conn->runQuery($chkUser, "check username for login '$username'", false);
             $chk = $run->fetch_assoc();
 
             if ($chk) {
@@ -195,7 +191,7 @@
             $getRooms = "SELECT * FROM ".RMSTBL." ORDER BY `name` ASC";
 
             // Get rooms
-            $run = $this->runQuery($getRooms, "get list of all rooms", false);
+            $run = $this->conn->runQuery($getRooms, "get list of all rooms", false);
             
             $this->closeConn();
             return $run;
@@ -209,7 +205,7 @@
             $this->makeConn();
             $getEvents = "SELECT * FROM ".EVTTBL." WHERE roomId = '$roomID'";
 
-            $run = $this->runQuery($getEvents, "get list of events for room $roomID", false);
+            $run = $this->conn->runQuery($getEvents, "get list of events for room $roomID", false);
             
             $count = 0;
             if ($run->num_rows > 0) {
