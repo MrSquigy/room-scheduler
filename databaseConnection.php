@@ -3,14 +3,21 @@
      * Database Connection Class
      */
 
-    require_once('../config.php');
+    require_once('config.php');
 
     class DatabaseConnection {
         /* Member vars */
         private $conn;
 
         /* Member functions */
-        private function makeConn($connectDB = true) {
+        function __construct($connectDB = true) {
+            $this->makeConn($connectDB);
+        }
+        function __destruct() {
+            $this->closeConn();
+        }
+
+        public function makeConn($connectDB = true) {
             // Function to make the mysql connection
             $this->conn = new mysqli(DBHOST, DBUSER, DBPWD);
 

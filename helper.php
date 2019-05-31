@@ -4,7 +4,7 @@
      */
 
     require_once('config.php');
-    require_once('classes/databaseConnection.php');
+    require_once('databaseConnection.php');
     require_once('user.php');
 
     // Session stuff
@@ -34,11 +34,6 @@
         private $conn; // DatabaseConnection object
 
         /* Member functions */
-        function __construct() {
-            // Constructor to set up dependant objects
-            $this->conn = new DatabaseConnection();
-        }
-
         public function setup($reinstall = false) {
             // Setup function
             $run;
@@ -162,24 +157,22 @@
 
         public function getRooms() {
             // Function to return an array of rooms
-            $run;
+            $this->conn = new DatabaseConnection();
 
-            $this->conn->makeConn();
             $getRooms = "SELECT * FROM ".RMSTBL." ORDER BY `name` ASC";
 
             // Get rooms
             $run = $this->conn->runQuery($getRooms, "get list of all rooms", false);
             
-            $this->conn->closeConn();
+            unset($this->conn);
             return $run;
         }
 
         public function getRoomSchedule($roomID) {
             // Function to return a table of the room schedule
-            $run;
+            $this->conn = new DatabaseConnection();
 
             $ret = "<table>";
-            $this->conn->makeConn();
             $getEvents = "SELECT * FROM ".EVTTBL." WHERE roomId = '$roomID'";
 
             $run = $this->conn->runQuery($getEvents, "get list of events for room $roomID", false);
@@ -193,7 +186,7 @@
 
             $ret = $ret . "</table>";
 
-            $this->conn->closeConn();
+            unset($this->conn);
             
             return $ret;
         }
