@@ -44,7 +44,7 @@
             debug("Connection closed");
         }
 
-        public function escapeStr($string) {
+        public function escape($string) {
             return mysqli_real_escape_string($this->conn, $string);
         }
     }
